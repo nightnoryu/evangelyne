@@ -5,8 +5,9 @@ running as a persistent gateway via Docker Compose.
 
 ## Features
 
-- Obsidian vault management
-- No bundled skills - I choose and write my own skills
+- No bundled skills except for the default `hermes-agent`. I prefer to choose and write
+  skills on my own.
+- Obsidian vault management with `obsidian` skill.
 
 ## Prerequisites
 
