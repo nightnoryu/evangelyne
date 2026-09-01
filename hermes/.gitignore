@@ -1,5 +1,6 @@
 *
 !/.gitignore
+!/.no-bundled-skills
 !/SOUL.md
 !/skills/
 !/.env.example
