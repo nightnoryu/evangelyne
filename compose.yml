@@ -1,0 +1,15 @@
+services:
+  hermes:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes
+    restart: unless-stopped
+    environment:
+      - HERMES_UID=1000
+      - HERMES_GID=1000
+      - HERMES_TIMEZONE=Europe/Moscow
+      - HERMES_DASHBOARD=false
+    volumes:
+      - './hermes:/opt/data'
+    ports:
+      - '127.0.0.1:8642:8642'
+    command: gateway run
