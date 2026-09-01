@@ -1,7 +1,12 @@
-# Hermes
+# Evangelyne
 
-Dockerized deployment of [Hermes Agent](https://github.com/NousResearch/hermes-agent)
-(Nous Research), running as a persistent gateway via Docker Compose.
+Dockerized deployment of [Hermes Agent](https://github.com/NousResearch/hermes-agent),
+running as a persistent gateway via Docker Compose.
+
+## Features
+
+- Obsidian vault management
+- No bundled skills - I choose and write my own skills
 
 ## Prerequisites
 
@@ -12,7 +17,7 @@ Dockerized deployment of [Hermes Agent](https://github.com/NousResearch/hermes-a
 ### 1. Clone
 
 ```bash
-git clone <this-repo-url> hermes
+git clone https://github.com/nightnoryu/evangelyne hermes
 cd hermes
 ```
 
@@ -82,6 +87,15 @@ Verify:
 ```bash
 docker compose logs -f hermes
 ```
+
+### 6. Next steps
+
+1. In my setup I also configure YouTrack MCP for work - choose whichever MCPs
+   are suitable for you.
+2. Prompt the agent to ask you questions and fill your `USER.md`. With this the
+   agent will understand your preferences better.
+3. If you're working with Obsidian, prompt the agent to set up `AGENTS.md` for
+   your vault. This will improve agent's understanding of your vault structure.
 
 ## Repository layout
 
