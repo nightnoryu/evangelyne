@@ -13,3 +13,8 @@ services:
     ports:
       - '127.0.0.1:8642:8642'
     command: gateway run
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: '1G'
