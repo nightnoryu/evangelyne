@@ -4,9 +4,6 @@ services:
     container_name: hermes
     restart: unless-stopped
     environment:
-      - HERMES_UID=1000
-      - HERMES_GID=1000
-      - HERMES_TIMEZONE=Europe/Moscow
       - HERMES_DASHBOARD=false
     volumes:
       - './hermes:/opt/data'

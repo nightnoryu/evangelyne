@@ -1,4 +1,8 @@
 services:
   hermes:
+    environment:
+      - HERMES_UID=1000
+      - HERMES_GID=1000
+      - HERMES_TIMEZONE=Europe/Moscow
     volumes:
       - '~/Documents/Notes:/opt/data/workspace/notes'
