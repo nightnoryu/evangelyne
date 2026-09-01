@@ -1,5 +1,6 @@
 *
 !/.gitignore
-
+!/SOUL.md
+!/USER.md
 !/skills/
 !/.env.example
