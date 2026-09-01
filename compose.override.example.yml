@@ -1,0 +1,4 @@
+services:
+  hermes:
+    volumes:
+      - '~/Documents/Notes:/opt/data/workspace/notes'
