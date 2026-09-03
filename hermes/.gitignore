@@ -1,6 +1,13 @@
 *
 !/.gitignore
-!/.no-bundled-skills
+
 !/SOUL.md
-!/skills/
 !/.env.example
+
+!/.no-bundled-skills
+!/skills/
+!/skills/**
+skills/autonomous-ai-agents/
+skills/.usage.json*
+skills/.bundled_manifest
+skills/.curator_state
