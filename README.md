@@ -3,10 +3,14 @@
 Dockerized deployment of [Hermes Agent](https://github.com/NousResearch/hermes-agent),
 running as a persistent gateway via Docker Compose.
 
-## Features
+## Skills
 
-- Bundled skills are disabled.  I prefer to choose and write skills on my own.
-- Obsidian vault management with the `obsidian` skill.
+Bundled skills are disabled by default.
+
+### Included and git-tracked skills
+
+- `note-taking/obsidian` - working with Obsidian vault
+- `communication/mom-test` - "The Mom Test" interview, source: [wondelai](https://github.com/wondelai/skills)
 
 ## Prerequisites
 
