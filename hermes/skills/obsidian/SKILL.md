@@ -1,9 +1,8 @@
 ---
 name: obsidian
 description: Read, search, create, and edit notes in the Obsidian vault.
-metadata:
-  hermes:
-    tags: [Obsidian, Notes, Markdown, Vault]
+required_environment_variables:
+  - OBSIDIAN_VAULT_PATH
 ---
 
 # Obsidian Vault
@@ -19,6 +18,16 @@ The documented vault-path convention is the `OBSIDIAN_VAULT_PATH` environment va
 File tools do not expand shell variables. Do not pass paths containing `$OBSIDIAN_VAULT_PATH` to `read_file`, `write_file`, `patch`, or `search_files`; resolve the vault path first and pass a concrete absolute path. Vault paths may contain spaces, which is another reason to prefer file tools over shell commands.
 
 If the vault path is unknown, `terminal` is acceptable for resolving `OBSIDIAN_VAULT_PATH` or checking whether the fallback path exists. Once the path is known, switch back to file tools.
+
+## Vault rules (AGENTS.md)
+
+Before modifying notes, load the vault-level rules from `<vault_path>/AGENTS.md`. It contains:
+
+- Folder structure and naming conventions (e.g., `000 Inbox`, `100 Проекты`, `200 Развитие`)
+- Content rules for TODOs, monthly evaluations, project notes
+- Agent behavior: when to ask, when to create, what not to touch
+
+Do not create top-level folders, move notes between folders, or delete notes without explicit user permission — even if AGENTS.md is missing, follow these defaults.
 
 ## Read a note
 
@@ -44,15 +53,14 @@ Use `write_file` with the resolved absolute path and the full markdown content. 
 
 ## Append to a note
 
-Prefer a native file-tool workflow when it is not awkward:
+Always use a two-step file-tool workflow:
 
-- Read the target note with `read_file`.
-- Use `patch` for an anchored append when there is stable context, such as adding a section after an existing heading or appending before a known trailing block.
-- Use `write_file` when rewriting the whole note is clearer than constructing a fragile patch.
+1. **Read** the target note with `read_file` to see its current content.
+2. **Edit** using one of these approaches (pick based on the situation):
 
-For an anchored append with `patch`, replace the anchor with the anchor plus the new content.
-
-For a simple append with no stable context, `terminal` is acceptable if it is the clearest safe option.
+   - **`patch` (preferred):** Find a stable anchor — the last heading, a trailing blank line, or the final paragraph — and replace it with the anchor plus the new content. This is safe and preserves everything else.
+   - **`write_file`:** Use only when the note is small or the changes are so extensive that rewriting the whole file is cleaner than a fragile patch.
+   - **`terminal` with `echo >> file`:** Last resort when the note has no stable anchor and is too large to rewrite. Use only with absolute paths and careful quoting.
 
 ## Targeted edits
 
