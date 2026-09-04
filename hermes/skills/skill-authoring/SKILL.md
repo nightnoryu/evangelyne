@@ -160,11 +160,10 @@ Validate a skill:
 ./scripts/validate.sh path/to/skill
 ```
 
-Or use the official validator:
+Or use the official validator via `uvx`:
 
 ```bash
-pip install skills-ref
-skills-ref validate path/to/skill
+uvx skills-ref validate path/to/skill
 ```
 
 Validation checks structure. It does not prove description quality, source coverage, or behavioral reliability.

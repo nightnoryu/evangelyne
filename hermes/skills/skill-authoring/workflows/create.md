@@ -8,7 +8,7 @@ Scaffold a new skill instantly. Script paths are relative to the `skill-authorin
 
 ```bash
 python scripts/init.py my-skill-name
-python scripts/init.py my-skill-name --path ~/.claude/skills  # custom location
+python scripts/init.py my-skill-name --path ~/skills  # custom location
 python scripts/init.py my-skill-name --router                  # skill routes between sub-workflows
 ```
 
@@ -36,7 +36,7 @@ Answer these questions:
 
 3. **Does this already exist?** Check if another skill covers this. Overlapping skills create activation conflicts.
 
-4. **Is this reusable?** If it's a one-off solution or project-specific convention, put it in CLAUDE.md instead.
+4. **Is this reusable?** If it's a one-off solution or project-specific convention, put it in your project configuration file (e.g., `AGENTS.md`, `CLAUDE.md`) instead.
 
 5. **What evidence should shape it?** For domain-specific skills, collect trustworthy sources before authoring: official docs, project docs, prior fixes, PR comments, incidents, failed agent outputs, and positive/negative examples. If source collection is substantial, use [synthesize.md](synthesize.md).
 

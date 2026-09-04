@@ -7,7 +7,7 @@ Usage:
     
 Examples:
     python init.py pdf-processor
-    python init.py pdf-processor --path ~/.claude/skills
+    python init.py pdf-processor --path ~/skills
     python init.py project-manager --router
 """
 
@@ -180,8 +180,8 @@ def main():
     parser.add_argument(
         "--path",
         type=Path,
-        default=Path.home() / ".claude" / "skills",
-        help="Directory to create skill in (default: ~/.claude/skills)"
+        default=Path.home() / "skills",
+        help="Directory to create skill in (default: ~/skills)"
     )
     parser.add_argument(
         "--router",

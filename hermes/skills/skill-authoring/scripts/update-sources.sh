@@ -120,11 +120,11 @@ update_source() {
   mkdir -p "$SOURCES_DIR"
   cp -r "$tmp_dir/repo/$path" "$SOURCES_DIR/$name"
   
-  # Rename SKILL.md to SKILL.reference.md to prevent Pi from discovering it
-  # (Pi recursively discovers all SKILL.md files as active skills)
+  # Rename SKILL.md to SKILL.reference.md to prevent the agent from discovering it
+  # (agents recursively discover all SKILL.md files as active skills)
   if [[ -f "$SOURCES_DIR/$name/SKILL.md" ]]; then
     mv "$SOURCES_DIR/$name/SKILL.md" "$SOURCES_DIR/$name/SKILL.reference.md"
-    echo "  Renamed SKILL.md → SKILL.reference.md (prevents Pi discovery)"
+    echo "  Renamed SKILL.md → SKILL.reference.md (prevents agent discovery)"
   fi
   
   # Record provenance

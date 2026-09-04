@@ -125,7 +125,7 @@ unless there's a reason not to, in which case try something else.
 
 **Problem:** System prompt or conversation history contradicts your skill.
 
-If CLAUDE.md says "always use PyPDF2" but your skill says "use pdfplumber," the agent may follow CLAUDE.md.
+If a project configuration file (e.g., `AGENTS.md`, `CLAUDE.md`) says "always use PyPDF2" but your skill says "use pdfplumber," the agent may follow the project file.
 
 **Fix:** Align skill instructions with project conventions, or make the skill's approach explicit:
 ```markdown

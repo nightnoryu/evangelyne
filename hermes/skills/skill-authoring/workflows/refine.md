@@ -137,7 +137,7 @@ If starting a new session:
 
 ## Meta-Question
 
-When a fix isn't obvious, ask yourself (or Claude):
+When a fix isn't obvious, ask yourself (or the agent):
 
 > "How could this skill have been written differently to make the correct behavior obvious?"
 
