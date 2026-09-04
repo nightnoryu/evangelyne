@@ -3,16 +3,21 @@
 Dockerized deployment of [Hermes Agent](https://github.com/NousResearch/hermes-agent),
 running as a persistent gateway via Docker Compose.
 
+## Persona
+
+`hermes/SOUL.md` is git-tracked and defines the agent's personality, tone, and
+default language. Edit it to shape how the agent talks and behaves.
+
 ## Skills
 
-Bundled skills are disabled by default.
+Bundled skills are disabled by default. Custom skills live in `hermes/skills/`.
 
 ### Included and git-tracked skills
 
-- `meta/skill-authoring` - skill for writing new skills, [source](https://github.com/joshuadavidthomas/agent-skills)
-- `note-taking/obsidian` - working with Obsidian vault
-- `communication/mom-test` - "The Mom Test" interview, [source](https://github.com/wondelai/skills)
-- `planning/task-decomposition` - decomposing big goals into small milestones
+- `skill-authoring` - skill for writing new skills, [source](https://github.com/joshuadavidthomas/agent-skills)
+- `obsidian` - working with Obsidian vault
+- `mom-test` - "The Mom Test" interview, [source](https://github.com/wondelai/skills)
+- `task-decomposition` - decomposing big goals into small milestones
 
 ## Prerequisites
 
