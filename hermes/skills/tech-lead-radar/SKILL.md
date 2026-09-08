@@ -51,6 +51,8 @@ The skill is especially useful for recurring scheduled runs.
 
 ## 1. Establish the review window
 
+Read the state file first (see [references/state-file.md](references/state-file.md) for format and rules) — it holds `last_seen`, `last_status`, `last_description_hash`, `last_attention`, `last_summary`, and `alerts` per issue from the previous run. This is the actual "previous radar run" referenced throughout this procedure.
+
 Determine what has changed since the previous radar run.
 
 Prefer incremental analysis over reviewing the entire project.
@@ -58,16 +60,17 @@ Prefer incremental analysis over reviewing the entire project.
 Look for:
 - newly created issues;
 - recently updated issues;
-- description changes;
+- description changes (compare the current description's hash against `last_description_hash` — a mismatch means the description changed and deserves a closer read, even if nothing else did);
 - comment activity;
-- state changes;
+- state changes (compare against `last_status`);
 - assignee changes;
 - priority changes;
 - newly linked issues;
 - changes in estimation;
-- changes in test coverage or testing information.
+- changes in test coverage or testing information;
+- attention crossing a threshold since last run (compare against `last_attention`).
 
-If previous-run state is unavailable, perform a broader initial scan and clearly treat it as a baseline.
+If the state file is missing or an issue has no prior entry, perform a broader initial scan for it and clearly treat it as a baseline — do not report it purely for "appearing for the first time."
 
 Use `search_issues` to build this window, then `get_issue` on each candidate to read the full description before scoring — summaries alone rarely show scope expansion or hidden complexity. See [references/youtrack-queries.md](references/youtrack-queries.md) for tested query syntax (relative dates, project scoping, state filters).
 
@@ -342,9 +345,34 @@ The question is always:
 
 ---
 
+# Persist State
+
+After producing the report (successful or empty), update the state file so the next run can diff against this one.
+
+For every issue examined this run (not only ones that scored ≥7), write or update its entry:
+
+```json
+{
+  "ISSUE-12345": {
+    "last_seen": "2026-09-08T08:00:00Z",
+    "last_status": "In Progress",
+    "last_description_hash": "...",
+    "last_attention": 5.2,
+    "last_summary": "Add client status field",
+    "alerts": []
+  }
+}
+```
+
+See [references/state-file.md](references/state-file.md) for the exact path, field semantics, hashing method, and the `alerts` array format (append an entry there whenever an issue crosses the `attention >= 7` reporting threshold, so repeat alerts can be told apart from new ones next run).
+
+Writing this file is bookkeeping for the skill's own incremental logic, not a change to YouTrack — it does not violate the read-only rule below.
+
+---
+
 # Safety
 
-This skill is READ-ONLY.
+This skill is READ-ONLY **with respect to YouTrack**.
 
 Never:
 - edit an issue;
@@ -355,6 +383,8 @@ Never:
 - modify estimates;
 - contact team members;
 - make architectural decisions on behalf of the Tech Lead.
+
+Writing to the local state file (see Persist State) is allowed and expected — it is not a YouTrack mutation.
 
 If the Tech Lead later asks for a comment or action, handle that as a separate explicit request.
 
@@ -374,3 +404,5 @@ Before returning the radar report:
 8. Ensure the report is written in Russian per the Output section.
 9. If nothing crosses the threshold, return exactly:
    `Нет задач, требующих твоего внимания.`
+
+After returning the report, write the updated state file per [references/state-file.md](references/state-file.md). A run is not complete until the state file is updated.
