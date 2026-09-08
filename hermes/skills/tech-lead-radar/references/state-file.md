@@ -31,12 +31,12 @@ Top-level object keyed by YouTrack issue ID. One entry per issue that has been e
 
 ### Field semantics
 
-- `last_seen` — ISO 8601 UTC timestamp (`Z` suffix) of this run's execution time, not the issue's own `updated` field.
+- `last_seen` — ISO 8601 UTC timestamp (`Z` suffix) of this run's actual execution time. Get this from a real clock source (e.g. run `date -u +%Y-%m-%dT%H:%M:%SZ` via the terminal tool, or an equivalent "get current time" tool call) — never infer it from the prompt text, a previous entry, or the model's own sense of "now". Do this once per run and reuse the same value for every entry touched in that run.
 - `last_status` — the issue's `State` custom field value at this run, verbatim from YouTrack (e.g. `Open`, `In Progress`, `Code Review`).
 - `last_description_hash` — a short deterministic hash (e.g. sha256 hex, truncated to 16 chars is fine) of the issue's current `description` field. Used purely to detect "did the description change since last run" without storing the full text. Recompute and compare on every run.
 - `last_attention` — the attention score (0–10, decimals allowed) assigned this run. Decimals let borderline scores be tracked precisely (e.g. `6.5` watched closely without crossing into report territory) even though the report itself only surfaces whole-number-looking thresholds.
 - `last_summary` — a short (one-line) plain description of what the issue currently is, for a human skimming the state file directly. Not shown in the chat report; this is a debugging/audit aid.
-- `alerts` — array of past alert records for this issue, oldest first. Append one entry each time the issue crosses `attention >= 7` and gets included in a report:
+- `alerts` — array of past alert records for this issue, oldest first. Append one entry each time the issue crosses `attention >= 7` and gets included in a report, using the same real-clock timestamp as `last_seen`:
 
 ```json
 {

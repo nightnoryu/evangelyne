@@ -53,6 +53,8 @@ The skill is especially useful for recurring scheduled runs.
 
 Read the state file first (see [references/state-file.md](references/state-file.md) for format and rules) — it holds `last_seen`, `last_status`, `last_description_hash`, `last_attention`, `last_summary`, and `alerts` per issue from the previous run. This is the actual "previous radar run" referenced throughout this procedure.
 
+Get the actual current UTC time from a real clock source (e.g. the terminal tool) once at the start of the run and reuse it for every `last_seen`/`alerts[].date` written this run — never infer "now" from the prompt text or a prior state entry.
+
 Determine what has changed since the previous radar run.
 
 Prefer incremental analysis over reviewing the entire project.
@@ -73,6 +75,8 @@ Look for:
 If the state file is missing or an issue has no prior entry, perform a broader initial scan for it and clearly treat it as a baseline — do not report it purely for "appearing for the first time."
 
 Use `search_issues` to build this window, then `get_issue` on each candidate to read the full description before scoring — summaries alone rarely show scope expansion or hidden complexity. See [references/youtrack-queries.md](references/youtrack-queries.md) for tested query syntax (relative dates, project scoping, state filters).
+
+**Exclude issues the Tech Lead is already personally involved in** — assigned to them (`for:`), reviewing (`Reviewers:`), or reported by them (`reporter:`). They're already across those; the radar's value is surfacing what they *don't* already know about. Apply this exclusion at query time, not as a post-filter — see [references/youtrack-queries.md](references/youtrack-queries.md) for the exact negated-filter syntax.
 
 ---
 
@@ -286,6 +290,8 @@ Only report tasks with `attention >= 7`.
 
 Write the final report in Russian, regardless of the language used internally for reasoning or tool calls. Keep issue IDs, field names like `Intervention`/`Attention`, and intervention window values (`before_development`, etc.) as-is — do not translate identifiers or enum values, only the prose.
 
+Render each issue ID as a Markdown hyperlink to its YouTrack issue, using the `url` field returned by `get_issue`/`search_issues` (e.g. `https://youtrack.ispring.lan/issue/CRM-10128`): `[CRM-10128](https://youtrack.ispring.lan/issue/CRM-10128)`. Never invent or guess the URL — use the one returned by the tool call for that exact issue.
+
 If there are no such tasks, return exactly:
 
 > Нет задач, требующих твоего внимания.
@@ -294,7 +300,7 @@ Otherwise use this format:
 
 ## Радар Тех. Лида
 
-### 🔴 ISSUE-ID — Короткое название
+### 🔴 [ISSUE-ID](https://youtrack.ispring.lan/issue/ISSUE-ID) — Короткое название
 
 **Внимание:** 9/10  
 **Когда вмешаться:** before_development
