@@ -18,6 +18,7 @@ Bundled skills are disabled by default. Custom skills live in `hermes/skills/`.
 - `obsidian` - working with Obsidian vault
 - `mom-test` - "The Mom Test" interview, [source](https://github.com/wondelai/skills)
 - `task-decomposition` - decomposing big goals into small milestones
+- `tech-lead-radar` - monitoring of youtrack tasks worth my attention
 
 ## Prerequisites
 
