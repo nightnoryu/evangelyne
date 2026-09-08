@@ -3,12 +3,12 @@
 Dockerized deployment of [Hermes Agent](https://github.com/NousResearch/hermes-agent),
 running as a persistent gateway via Docker Compose.
 
-## Persona
+## 🧝‍♀️ Persona
 
 `hermes/SOUL.md` is git-tracked and defines the agent's personality, tone, and
 default language. Edit it to shape how the agent talks and behaves.
 
-## Skills
+## 🤺 Skills
 
 Bundled skills are disabled by default. Custom skills live in `hermes/skills/`.
 
@@ -20,11 +20,11 @@ Bundled skills are disabled by default. Custom skills live in `hermes/skills/`.
 - `task-decomposition` - decomposing big goals into small milestones
 - `tech-lead-radar` - monitoring of youtrack tasks worth my attention
 
-## Prerequisites
+## 📦 Installation
+
+### 0. Prerequisites
 
 - docker with docker-compose-plugin
-
-## Installation
 
 ### 1. Clone
 
