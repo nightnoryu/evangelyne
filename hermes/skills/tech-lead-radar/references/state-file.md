@@ -24,7 +24,9 @@ Top-level object keyed by YouTrack issue ID. One entry per issue that has been e
     "last_description_hash": "...",
     "last_attention": 5.2,
     "last_summary": "Add client status field",
-    "alerts": []
+    "alerts": [],
+    "feedback": "not_interesting",
+    "feedback_set_at": "2026-09-10T09:15:00Z"
   }
 }
 ```
@@ -51,6 +53,11 @@ Top-level object keyed by YouTrack issue ID. One entry per issue that has been e
 ```
 
 Use this history to distinguish a fresh escalation from a repeat one — if the issue already has a recent alert at a similar or higher attention level with the same core reason, say so explicitly in the report ("previously flagged on 2026-09-05 for the same reason") instead of presenting it as new.
+
+- `feedback` — optional. One of `"not_interesting"` or `"especially_interesting"`, set exclusively via an explicit Tech Lead request (see SKILL.md § Feedback & Attention Overrides). Absent means no feedback given. Setting one value should replace/clear the other, not stack them. Cleared by removing the key entirely (do not set it to `null` or `""` — omit it).
+- `feedback_set_at` — ISO 8601 UTC timestamp of when `feedback` was last set, from a real clock source. Present only alongside `feedback`; remove it together with `feedback` on clear.
+
+Setting or clearing `feedback`/`feedback_set_at` is a standalone read-modify-write against this file, independent of a scheduled radar run — do the full read-modify-write immediately when the Tech Lead gives feedback, not only at the end of the next run.
 
 ## Read-modify-write rules
 

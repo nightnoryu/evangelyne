@@ -1,6 +1,6 @@
 ---
 name: tech-lead-radar
-description: Detect YouTrack tasks that may require Tech Lead attention
+description: Detect YouTrack tasks that may require Tech Lead attention; also records local-only feedback (not_interesting / especially_interesting) to tune future reports without ever writing to YouTrack
 ---
 
 # Tech Lead Radar
@@ -51,7 +51,7 @@ The skill is especially useful for recurring scheduled runs.
 
 ## 1. Establish the review window
 
-Read the state file first (see [references/state-file.md](references/state-file.md) for format and rules) — it holds `last_seen`, `last_status`, `last_description_hash`, `last_attention`, `last_summary`, and `alerts` per issue from the previous run. This is the actual "previous radar run" referenced throughout this procedure.
+Read the state file first (see [references/state-file.md](references/state-file.md) for format and rules) — it holds `last_seen`, `last_status`, `last_description_hash`, `last_attention`, `last_summary`, `alerts`, and optionally `feedback`/`feedback_set_at` per issue from the previous run. This is the actual "previous radar run" referenced throughout this procedure.
 
 Get the actual current UTC time from a real clock source (e.g. the terminal tool) once at the start of the run and reuse it for every `last_seen`/`alerts[].date` written this run — never infer "now" from the prompt text or a prior state entry.
 
@@ -76,6 +76,8 @@ If the state file is missing or an issue has no prior entry, perform a broader i
 
 Use `search_issues` to build this window, then `get_issue` on each candidate to read the full description before scoring — summaries alone rarely show scope expansion or hidden complexity. See [references/youtrack-queries.md](references/youtrack-queries.md) for tested query syntax (relative dates, project scoping, state filters).
 
+If a helper script (e.g. for hashing descriptions) needs a scratch file, write it under `/opt/data/tmp/` (create the directory if needed), not `/tmp/` — the write sandbox (`HERMES_WRITE_SAFE_ROOT`) is scoped to `/opt/data`, so `/tmp` writes are denied and waste a step.
+
 **Exclude issues the Tech Lead is already personally involved in** — assigned to them (`for:`), reviewing (`Reviewers:`), or reported by them (`reporter:`). They're already across those; the radar's value is surfacing what they *don't* already know about. Apply this exclusion at query time, not as a post-filter — see [references/youtrack-queries.md](references/youtrack-queries.md) for the exact negated-filter syntax.
 
 ---
@@ -96,6 +98,8 @@ Usually ignore:
 However, do not ignore a task solely because its YouTrack type is "Service".
 
 A task that appears routine may still hide significant engineering impact.
+
+Also apply any saved Tech Lead feedback for the issue at this point — see [Feedback & Attention Overrides](#feedback--attention-overrides) below. An issue marked `not_interesting` is noise unless new significant details appeared since it was marked; an issue marked `especially_interesting` is never routine noise regardless of its score.
 
 ---
 
@@ -284,9 +288,60 @@ Two recurring situations need calibrated (not reflexive) handling — read [refe
 
 ---
 
+# Feedback & Attention Overrides
+
+The Tech Lead can give feedback on any issue the radar has surfaced, at any time — not only right after a report. Feedback is stored **only in the local state file**; it never touches YouTrack (no tags, no comments, no fields — see Safety).
+
+## Marking an issue
+
+Two feedback values, stored per-issue in state as `feedback`:
+
+- **`not_interesting`** — the Tech Lead has reviewed this and it does not warrant radar attention. Future runs must suppress it from the report *unless* a materially new significant detail appears (see Suppression rule below).
+- **`especially_interesting`** — the Tech Lead wants this issue watched more closely than default. Future runs must track it with extra scrutiny (see Enhanced tracking rule below) and it must never be silently dropped as noise.
+
+Accept feedback commands in natural language referencing an issue ID, e.g.:
+
+> "CRM-10128 неинтересна, больше не показывай"
+> "PROJ-55 отметь как особенно интересную"
+> "убери пометку с CRM-10128" / "сними отметку"
+
+On receiving such a request:
+
+1. Read the state file.
+2. Locate (or create, if it doesn't exist yet — e.g. feedback given on an issue outside the current run's window) the entry for that issue ID.
+3. Set or clear its `feedback` field per [references/state-file.md](references/state-file.md) (`not_interesting`, `especially_interesting`, or remove the field entirely to clear).
+4. Record `feedback_set_at` (real-clock UTC timestamp) alongside it.
+5. Write the full state file back immediately — this is a standalone action, not tied to a scheduled run.
+6. Confirm briefly to the Tech Lead what was recorded. Do not silently apply it.
+
+This action never calls any YouTrack write endpoint and never runs as part of, or instead of, a review — it only edits local state.
+
+## Suppression rule (`not_interesting`)
+
+During step 2 (Filter obvious noise) and step 6 (Assess Tech Lead attention), if an issue's state entry has `feedback: "not_interesting"`:
+
+- Compute the score normally, but suppress it from the report **unless** something materially significant changed since `feedback_set_at`: description hash changed in a way that alters scope/risk (not a typo fix), a scope-expansion or implementation-direction shift per steps 4–5, a state change into a risk-relevant phase (e.g. moving toward release), or a jump in attention score of roughly +3 or more versus `last_attention`.
+- If suppressed, still update `last_seen`, `last_status`, `last_description_hash`, `last_attention`, `last_summary` as normal — feedback suppresses *reporting*, not *tracking*.
+- If the suppression is overridden because something significant changed, say so explicitly in the report: state that this issue was previously marked not interesting by the Tech Lead, and name the specific new detail that justified resurfacing it. Do not resurface it silently as if it were a fresh finding.
+
+## Enhanced tracking rule (`especially_interesting`)
+
+If an issue's state entry has `feedback: "especially_interesting"`:
+
+- Never filter it out in step 2 regardless of how routine it looks.
+- Read comments and linked issues more thoroughly than the default pass, since the Tech Lead explicitly wants finer-grained visibility.
+- Lower the effective reporting bar for this issue: report it whenever `last_attention` moved at all since the previous run (even a small delta, e.g. 4→5), not only when it crosses 7. Label it clearly in the report as being surfaced due to the Tech Lead's own "особенно интересно" marking, so it doesn't read as if it crossed the normal threshold.
+- Still assign a genuine attention score — do not inflate it artificially. The marking changes the *reporting bar*, not the *scoring logic*.
+
+## Precedence
+
+If somehow both flags would apply (should not normally happen since setting one should be treated as clearing the other), `especially_interesting` wins — never suppress an issue the Tech Lead explicitly asked to watch more closely.
+
+---
+
 # Output
 
-Only report tasks with `attention >= 7`.
+Only report tasks with `attention >= 7`, plus any issue surfaced via the Enhanced tracking rule for `especially_interesting` feedback (see [Feedback & Attention Overrides](#feedback--attention-overrides)) even if it scores below 7 — mark those clearly as a Tech-Lead-requested watch item, not a standard threshold crossing.
 
 Write the final report in Russian, regardless of the language used internally for reasoning or tool calls. Keep issue IDs, field names like `Intervention`/`Attention`, and intervention window values (`before_development`, etc.) as-is — do not translate identifiers or enum values, only the prose.
 
@@ -355,7 +410,7 @@ The question is always:
 
 After producing the report (successful or empty), update the state file so the next run can diff against this one.
 
-For every issue examined this run (not only ones that scored ≥7), write or update its entry:
+For every issue examined this run (not only ones that scored ≥7), write or update its entry, preserving any existing `feedback`/`feedback_set_at` untouched (feedback is only set/cleared via an explicit Tech Lead request, never as a side effect of a scoring run):
 
 ```json
 {
@@ -365,7 +420,9 @@ For every issue examined this run (not only ones that scored ≥7), write or upd
     "last_description_hash": "...",
     "last_attention": 5.2,
     "last_summary": "Add client status field",
-    "alerts": []
+    "alerts": [],
+    "feedback": "not_interesting",
+    "feedback_set_at": "2026-09-10T09:15:00Z"
   }
 }
 ```
@@ -391,6 +448,8 @@ Never:
 - make architectural decisions on behalf of the Tech Lead.
 
 Writing to the local state file (see Persist State) is allowed and expected — it is not a YouTrack mutation.
+
+Recording Tech Lead feedback (`not_interesting` / `especially_interesting`, see [Feedback & Attention Overrides](#feedback--attention-overrides)) is also local-state-only and allowed. Never translate feedback into a YouTrack tag, comment, custom field, or any other YouTrack write — even if it would be convenient or the Tech Lead's phrasing sounds like a request to label the issue in YouTrack itself. If genuinely ambiguous whether the Tech Lead wants a YouTrack-visible change, ask before writing anything to YouTrack — never assume it's in scope.
 
 If the Tech Lead later asks for a comment or action, handle that as a separate explicit request.
 
