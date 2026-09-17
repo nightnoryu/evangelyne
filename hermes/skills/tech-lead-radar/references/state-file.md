@@ -59,6 +59,10 @@ Use this history to distinguish a fresh escalation from a repeat one — if the 
 
 Setting or clearing `feedback`/`feedback_set_at` is a standalone read-modify-write against this file, independent of a scheduled radar run — do the full read-modify-write immediately when the Tech Lead gives feedback, not only at the end of the next run.
 
+Note: cron toolset gating (whether `delegate_task` is available inside a cron-run session) is
+covered in SKILL.md § "Delegate scoring to subagents when the window is large" — it does not
+affect state-file access itself, which always goes through the `file` toolset.
+
 ## Read-modify-write rules
 
 1. Read the full file at the start of step 1 (Establish the review window).

@@ -5,6 +5,13 @@ description: Detect YouTrack tasks that may require Tech Lead attention; also re
 
 # Tech Lead Radar
 
+> ⚠️ **Feedback commands are a script call, never a YouTrack write.**
+> "отметь как интересную" / "неинтересна, не показывай" / "сними пометку" (or English
+> equivalents) → run `scripts/set_feedback.py ISSUE-ID <especially_interesting|not_interesting|clear>`.
+> That is the ENTIRE action. Never call `update_issue`, `manage_issue_tags`, subscription/vote,
+> or any other YouTrack write tool for this — feedback lives only in the local state file. See
+> [Feedback & Attention Overrides](#feedback--attention-overrides) for the full procedure.
+
 ## Purpose
 
 Act as a personal radar for a Tech Lead.
@@ -75,6 +82,38 @@ Look for:
 If the state file is missing or an issue has no prior entry, perform a broader initial scan for it and clearly treat it as a baseline — do not report it purely for "appearing for the first time."
 
 Use `search_issues` to build this window, then `get_issue` on each candidate to read the full description before scoring — summaries alone rarely show scope expansion or hidden complexity. See [references/youtrack-queries.md](references/youtrack-queries.md) for tested query syntax (relative dates, project scoping, state filters).
+
+### Delegate scoring to subagents when the window is large
+
+Reading a full description + comments for every candidate and reasoning about signals, scope
+expansion, and implementation-direction shifts for each one is a lot of prose to hold in one
+context alongside this whole SKILL.md. On a small window (roughly ≤5 candidates) just score them
+directly — delegation overhead isn't worth it. Once the window is larger, delegate per-issue
+scoring to a subagent (see [references/subagent-scoring.md](references/subagent-scoring.md) for
+the exact task template and output contract) so the orchestrator's own context only ever holds
+compact JSON verdicts, not full issue bodies. This exists specifically to avoid context rot:
+a long-running scan that piles every issue's full text plus this skill's instructions into one
+context is exactly the situation where a model starts skipping instructions buried later in the
+document (e.g. the Safety rules, or the Feedback Overrides section) — keep the orchestrator's
+context small and offload the heavy reading.
+
+The orchestrator still owns: building the search query, reading/writing the state file, applying
+suppression/enhanced-tracking rules from saved `feedback` (cheap, doesn't need full issue text),
+assembling the final report, and every YouTrack write-adjacent decision (there should be none —
+this skill is read-only). Subagents never touch YouTrack write endpoints, never touch the state
+file, and never see feedback-setting requests — those two things stay exclusively with the
+orchestrator per [Feedback & Attention Overrides](#feedback--attention-overrides).
+
+**If this skill runs as a cron job (its primary intended use — see "When to Use"), pin
+`enabled_toolsets` on the job to explicitly include `delegation`** when using subagent scoring.
+Cron toolset resolution falls through job override → `cron`-platform config in `hermes tools` →
+built-in default, and whether `delegation` is present at the last two layers is not something
+you can verify by reading config alone — an unset `cron` platform entry in `platform_toolsets`
+means the job is riding an ambiguous fallback. Pinning it removes the ambiguity instead of hoping
+the fallback happens to include it: `cronjob(action="update", job_id="...",
+enabled_toolsets=["delegation", "file", "code_execution", "skills", "web"])` (add whatever else
+the job's other steps need — YouTrack access goes through the MCP server, not toolset gating, so
+it is unaffected by this list).
 
 If a helper script (e.g. for hashing descriptions) needs a scratch file, write it under `/opt/data/tmp/` (create the directory if needed), not `/tmp/` — the write sandbox (`HERMES_WRITE_SAFE_ROOT`) is scoped to `/opt/data`, so `/tmp` writes are denied and waste a step.
 
@@ -305,16 +344,25 @@ Accept feedback commands in natural language referencing an issue ID, e.g.:
 > "PROJ-55 отметь как особенно интересную"
 > "убери пометку с CRM-10128" / "сними отметку"
 
-On receiving such a request:
+On receiving such a request, run the helper script — do not hand-edit the state file and do not
+call any YouTrack tool:
 
-1. Read the state file.
-2. Locate (or create, if it doesn't exist yet — e.g. feedback given on an issue outside the current run's window) the entry for that issue ID.
-3. Set or clear its `feedback` field per [references/state-file.md](references/state-file.md) (`not_interesting`, `especially_interesting`, or remove the field entirely to clear).
-4. Record `feedback_set_at` (real-clock UTC timestamp) alongside it.
-5. Write the full state file back immediately — this is a standalone action, not tied to a scheduled run.
-6. Confirm briefly to the Tech Lead what was recorded. Do not silently apply it.
+```
+python3 <skill_dir>/scripts/set_feedback.py ISSUE-ID especially_interesting
+python3 <skill_dir>/scripts/set_feedback.py ISSUE-ID not_interesting
+python3 <skill_dir>/scripts/set_feedback.py ISSUE-ID clear
+```
 
-This action never calls any YouTrack write endpoint and never runs as part of, or instead of, a review — it only edits local state.
+The script does the full read-modify-write against [the state file](references/state-file.md)
+itself: it creates the issue's entry if missing (e.g. feedback given on an issue outside the
+current run's window), sets/clears `feedback` and `feedback_set_at` (real-clock UTC timestamp),
+and leaves every other field of that entry and every other issue's entry untouched. It prints the
+resulting entry as JSON — read that output and confirm briefly to the Tech Lead what was recorded.
+Do not silently apply it.
+
+This action never calls any YouTrack write endpoint and never runs as part of, or instead of, a
+review — it only edits local state. If the script fails for any reason, do not fall back to a
+manual state-file edit silently — report the failure and ask before proceeding.
 
 ## Suppression rule (`not_interesting`)
 
