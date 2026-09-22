@@ -1,5 +1,5 @@
 services:
-  hermes:
+  evangelyne-hermes:
     environment:
       - HERMES_UID=1000
       - HERMES_GID=1000
