@@ -12,7 +12,7 @@ One subagent per candidate issue, dispatched in parallel (batch all of them in a
 1. Run `search_issues` to get the candidate ID list (per
    [references/youtrack-queries.md](youtrack-queries.md)).
 2. Read the state file once. For each candidate, pull its prior entry if any
-   (`last_status`, `last_description_hash`, `last_attention`, `last_summary`, `feedback`).
+   (`last_status`, `last_description_hash`, `last_attention`, `last_summary`).
 3. Build one subagent task per candidate — do NOT dump the full state file or the full SKILL.md
    into every task; each task gets only that one issue's prior entry (or "no prior entry, treat
    as baseline" if none).
@@ -68,25 +68,19 @@ output_schema:
 
 1. Collect each subagent's JSON verdict (validated against `output_schema` — that's automatic via
    `delegate_task`'s `output_schema` mechanism, with one correction retry on failure).
-2. For issues with a saved `feedback`, apply the
-   [Suppression rule](../SKILL.md#suppression-rule-not_interesting) or
-   [Enhanced tracking rule](../SKILL.md#enhanced-tracking-rule-especially_interesting) using the
-   returned `attention`/`scope_change` — this logic is cheap and stays in the orchestrator.
-3. Build the final Russian-language report per [SKILL.md § Output](../SKILL.md#output) from the
+2. Build the final Russian-language report per [SKILL.md § Output](../SKILL.md#output) from the
    compact verdicts only — never paste a subagent's raw reasoning transcript into the report.
-4. Update the state file (read-modify-write) using each verdict's `attention`, `status`,
+3. Update the state file (read-modify-write) using each verdict's `attention`, `status`,
    `description_hash`, `summary`, and append an `alerts` entry for anything crossing the
-   reporting threshold. Preserve `feedback`/`feedback_set_at` untouched (subagents never see or
-   modify it).
+   reporting threshold.
 
 ## Why this shape
 
 - Subagents get a narrow, single-issue task — no competing multi-hundred-line skill document to
-  skim past, no adjacent unrelated instructions (like Feedback Overrides) that don't apply to
-  them and could get misapplied.
+  skim past.
 - The orchestrator never ingests full issue descriptions/comments for candidates — only compact
   JSON — so its own context stays small across a scan of any size, and it, not a subagent, is the
-  only place feedback commands and state-file writes ever happen.
+  only place state-file writes happen.
 - Explicitly telling every subagent "you are read-only, never call a YouTrack write tool" in the
   task goal (not just relying on it inheriting the parent skill) closes the exact failure mode
   that motivated this file: a model reaching for the closest-sounding write tool instead of
