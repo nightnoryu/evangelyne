@@ -1,5 +1,13 @@
 [
   {
+    "name": "Tech Lead Radar — CRM",
+    "prompt": "Используя скилл tech-lead-radar, просмотри недавно изменённые задачи YouTrack в проекте CRM и выведи задачи с Tech Lead attention >= 7/10",
+    "skills": [
+      "tech-lead-radar"
+    ],
+    "schedule": "30 10 * * 1-5",
+    "enabled": true,
+    "deliver": "telegram",
     "enabled_toolsets": [
       "delegation",
       "file",
@@ -11,27 +19,19 @@
     "context_from": [
       "self"
     ],
-    "no_agent": false,
-    "skills": [
-      "tech-lead-radar"
-    ],
-    "enabled": true,
-    "schedule": "30 10 * * 1-5",
-    "prompt": "Используя скилл tech-lead-radar, просмотри недавно изменённые задачи YouTrack в проекте CRM и выведи задачи с Tech Lead attention >= 7/10",
-    "deliver": "telegram",
-    "name": "Tech Lead Radar — CRM"
+    "no_agent": false
   },
   {
-    "attach_to_session": true,
-    "no_agent": false,
+    "name": "Obsidian Inbox cleanup",
+    "prompt": "Проверь Obsidian Inbox на залежавшиеся заметки и предложи, что с ними сделать.\n\nШаги:\n1. Разреши путь к vault: используй OBSIDIAN_VAULT_PATH (по умолчанию /opt/data/workspace/notes).\n2. Найди все .md файлы в папке `000 Inbox` внутри vault.\n3. Если Inbox пуст — напиши коротко: «Inbox чист, ничего не залежалось ✅» и остановись.\n4. Если заметки есть — для каждой покажи:\n   - Название заметки\n   - Краткое содержание (первые 2-3 строки)\n   - Когда последний раз обновлена (дата)\n5. Для каждой заметки предложи конкретное действие: перенести в проект, перенести в Развитие, удалить, или оставить.\n6. Если заметка старая (больше 3 дней) — выдели это и предложи обработать в первую очередь.\n7. В конце спроси, хочет ли пользователь что-то сделать с заметками прямо сейчас.",
     "skills": [
       "obsidian"
     ],
-    "enabled": true,
     "schedule": "0 10 * * 1-5",
-    "prompt": "Проверь Obsidian Inbox на залежавшиеся заметки и предложи, что с ними сделать.\n\nШаги:\n1. Разреши путь к vault: используй OBSIDIAN_VAULT_PATH (по умолчанию /opt/data/workspace/notes).\n2. Найди все .md файлы в папке `000 Inbox` внутри vault.\n3. Если Inbox пуст — напиши коротко: «Inbox чист, ничего не залежалось ✅» и остановись.\n4. Если заметки есть — для каждой покажи:\n   - Название заметки\n   - Краткое содержание (первые 2-3 строки)\n   - Когда последний раз обновлена (дата)\n5. Для каждой заметки предложи конкретное действие: перенести в проект, перенести в Развитие, удалить, или оставить.\n6. Если заметка старая (больше 3 дней) — выдели это и предложи обработать в первую очередь.\n7. В конце спроси, хочет ли пользователь что-то сделать с заметками прямо сейчас.",
+    "enabled": true,
     "deliver": "telegram",
-    "name": "Obsidian Inbox cleanup",
-    "workdir": "/opt/data/workspace/notes"
+    "no_agent": false,
+    "workdir": "/opt/data/workspace/notes",
+    "attach_to_session": true
   }
 ]
