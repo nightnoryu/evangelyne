@@ -22,12 +22,12 @@ LOCAL_CONFIG_KEYS = {
     "model", "custom_providers", "known_builtin_toolsets",
     "known_plugin_toolsets", "onboarding", "_config_version",
 }
-JOB_FIELDS = {
+JOB_FIELDS = (
     "name", "prompt", "skills", "schedule", "enabled", "deliver",
     "enabled_toolsets", "context_from", "script", "no_agent",
     "monitor_script", "monitor_url", "workdir", "attach_to_session",
     "failure_deliver", "reasoning_effort",
-}
+)
 PROVIDER_FIELDS = {
     "model", "provider", "model_provider", "base_url",
     "model_snapshot", "provider_snapshot",
@@ -115,7 +115,7 @@ def portable_job(job):
 def validate_job(spec):
     if not isinstance(spec, dict) or not isinstance(spec.get("name"), str):
         raise ValueError("Each cron job needs a name")
-    if set(spec) - JOB_FIELDS - {"repeat"}:
+    if set(spec) - set(JOB_FIELDS) - {"repeat"}:
         raise ValueError(f"Unsupported fields in cron job {spec['name']}")
     if not isinstance(spec.get("schedule"), str) or not spec["schedule"]:
         raise ValueError(f"Cron job {spec['name']} needs a schedule")
