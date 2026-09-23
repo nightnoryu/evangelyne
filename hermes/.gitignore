@@ -5,6 +5,10 @@
 !/.env.example
 
 !/.no-bundled-skills
+!/persist.py
+!/persisted/
+!/persisted/config.yaml
+!/persisted/jobs.json
 !/skills/
 !/skills/**
 skills/autonomous-ai-agents/
