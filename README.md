@@ -1,10 +1,12 @@
-# Evangelyne
+<h1 align="center">Evangelyne</h1>
+<p align="center"><i>An AI colleague that remembers, thinks with you, and occasionally taps you on the shoulder when something deserves your attention.</i></p>
 
-Evangelyne is a personal engineering assistant built on [Hermes Agent](https://github.com/NousResearch/hermes-agent).
+<p align="center">
+    <a href="https://github.com/nightnoryu/evangelyne/blob/main/LICENSE"><img src="https://img.shields.io/github/license/nightnoryu/evangelyne?cache-control=no-cache"></a>
+</p>
+
+A personal engineering assistant built on [Hermes Agent](https://github.com/NousResearch/hermes-agent).
 It runs as a Docker Compose gateway, with a Russian-language assistant persona, reusable skills, scheduled jobs, and portable configuration.
-
-> An AI colleague that remembers, thinks with you, and occasionally
-> taps you on the shoulder when something deserves your attention.
 
 ## ✨ What’s included
 
@@ -13,7 +15,7 @@ It runs as a Docker Compose gateway, with a Russian-language assistant persona, 
 - **Skills** for YouTrack risk reviews, Obsidian inbox triage, task planning, customer interviews, and skill authoring.
 - **Portable settings** for Hermes configuration and cron jobs in `hermes/persisted/`.
 
-## 🚀 Set up
+## 🚀 Run your own
 
 1. Create local configuration files:
 
