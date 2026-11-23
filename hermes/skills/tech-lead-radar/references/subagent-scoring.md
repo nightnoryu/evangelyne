@@ -4,8 +4,18 @@ Used by [SKILL.md step 1](../SKILL.md#1-establish-the-review-window) when the re
 enough candidates that scoring them all in the orchestrator's own context risks context rot (long
 issue bodies + this whole skill's instructions competing for attention in one context).
 
-One subagent per candidate issue, dispatched in parallel (batch all of them in a single
-`delegate_task` call with multiple `tasks` entries — independent work, no need to serialize).
+**At most 3 subagents run concurrently; each scores a CHUNK of issues, not one issue.** Split
+the candidate list into up to 3 roughly equal chunks and dispatch them as one parallel
+`delegate_task` call with 3 `tasks` entries. Never fan out one subagent per issue: in a
+2026-11-20 run, 25 of 40 per-issue subagents died with provider stalls ("Provider has been
+unresponsive for 5 consecutive stale attempts", broken pipe) after 15–25 minutes each.
+Chunked dispatch (3 subagents × ~10–15 issues) produces the same verdicts without the stall
+storm.
+
+Chunk-failure handling: if a chunk fails, read its live transcript for the real cause — the
+delegation wrapper's error text is unreliable (it reports "output_schema mismatch" even when the
+transcript shows a provider stall). Retry the chunk once; if it fails again, score that chunk's
+issues directly in the orchestrator with `get_issue` instead of losing them.
 
 ## What the orchestrator does before delegating
 
@@ -13,34 +23,38 @@ One subagent per candidate issue, dispatched in parallel (batch all of them in a
    [references/youtrack-queries.md](youtrack-queries.md)).
 2. Read the state file once. For each candidate, pull its prior entry if any
    (`last_status`, `last_description_hash`, `last_attention`, `last_summary`).
-3. Build one subagent task per candidate — do NOT dump the full state file or the full SKILL.md
-   into every task; each task gets only that one issue's prior entry (or "no prior entry, treat
-   as baseline" if none).
+3. Build one task per chunk. Each task lists its chunk's issue IDs and carries, per issue, the
+   prior entry MINUS `last_description_hash` (status, attention, summary only — or "no prior
+   entry, treat as baseline"). Keep `last_description_hash` out of subagent context entirely:
+   given a hash string in context, models echo it back instead of computing the real one (seen
+   in the 2026-11-20 run). The orchestrator keeps hashes itself for its own change detection.
 
 ## Task template (fill in per issue)
 
 ```
 goal: >
-  Score YouTrack issue {ISSUE-ID} for Tech Lead attention per the tech-lead-radar scoring
-  procedure. Read the issue with get_issue (full description, comments, linked issues, custom
-  fields). Load skill_view(name='tech-lead-radar', file_path='references/signals.md') and
+  Score the YouTrack issues listed in context (one chunk of the radar window) for Tech Lead
+  attention per the tech-lead-radar scoring procedure. For EACH issue: read it with get_issue
+  (full description, comments, linked issues, custom fields). Load
+  skill_view(name='tech-lead-radar', file_path='references/signals.md') and
   skill_view(name='tech-lead-radar', file_path='references/special-rules.md') before scoring —
   they contain the signal catalog and calibration rules (PM-proposed solutions, test coverage)
-  you must apply. Compare against the "prior state" given below to detect scope expansion,
-  implementation-direction changes, and description/status changes. Assign an attention score
-  0-10 with a one-line justification, pick an intervention window from
+  you must apply. Compare each issue against its prior state (or treat as baseline) to detect
+  scope expansion, implementation-direction changes, and description/status changes. Assign each
+  an attention score 0-10 with a one-line justification, pick an intervention window from
   (before_development, during_development, before_review, before_release, after_release,
   monitor_only), and list the 2-5 strongest reasons (concrete, not vague). Return ONLY the JSON
-  object described in output_schema — no prose, no markdown report.
+  object described in output_schema — no prose, no markdown.
 
   YOU ARE READ-ONLY. Never call any YouTrack write/update/tag/comment/subscription/vote tool.
   Never write to any state file. Your only job is to read and return a verdict.
 
 context: |
-  Issue ID: {ISSUE-ID}
-  Prior state entry (from previous radar run, or "none — baseline" if this is the first time
-  this issue is seen):
-  {prior_state_json_or_"none"}
+  Chunk issues (score each one): {ISSUE-ID-1}, {ISSUE-ID-2}, ...
+  Per issue, prior state entry from the previous radar run (or "none — baseline" if this is the
+  first time this issue is seen) — status/attention/summary ONLY, deliberately no
+  description_hash:
+  {prior_state_entries_or_"none"}
 
   Score using the tech-lead-radar procedure: attention 0-10, where 0-3 ignore, 4-6 watch,
   7-8 review, 9-10 intervene. Signals to weigh: architecture impact, production risk, weak
@@ -50,18 +64,24 @@ context: |
 
 output_schema:
   type: object
-  required: [issue_id, url, attention, status, description_hash, summary]
+  required: [verdicts]
   properties:
-    issue_id: {type: string}
-    url: {type: string, description: "exact url field from get_issue, never invented"}
-    attention: {type: number}
-    intervention_window: {type: string}
-    status: {type: string, description: "current State custom field value, verbatim"}
-    description_hash: {type: string, description: "sha256 hex of current description, truncated to 16 chars"}
-    summary: {type: string, description: "one-line plain summary of what the issue currently is"}
-    reasons: {type: array, items: {type: string}}
-    scope_change: {type: string, description: "what changed vs prior state, or empty string if no prior state / no change"}
-    questions: {type: array, items: {type: string}, description: "questions to suggest to the Tech Lead, not solutions"}
+    verdicts:
+      type: array
+      items:
+        type: object
+        required: [issue_id, url, attention, status, description_hash, summary]
+        properties:
+          issue_id: {type: string}
+          url: {type: string, description: "exact url field from get_issue, never invented"}
+          attention: {type: number}
+          intervention_window: {type: string}
+          status: {type: string, description: "current State custom field value, verbatim"}
+          description_hash: {type: string, description: "sha256 hex of the CURRENT description from YOUR OWN get_issue call, truncated to 16 chars; hash the empty string if description is null; never reuse any hash string from the task context"}
+          summary: {type: string, description: "one-line plain summary of what the issue currently is"}
+          reasons: {type: array, items: {type: string}}
+          scope_change: {type: string, description: "what changed vs prior state, or empty string if no prior state / no change"}
+          questions: {type: array, items: {type: string}, description: "questions to suggest to the Tech Lead, not solutions"}
 ```
 
 ## What the orchestrator does after delegating
@@ -72,12 +92,15 @@ output_schema:
    compact verdicts only — never paste a subagent's raw reasoning transcript into the report.
 3. Update the state file (read-modify-write) using each verdict's `attention`, `status`,
    `description_hash`, `summary`, and append an `alerts` entry for anything crossing the
-   reporting threshold.
+   reporting threshold. For every issue you REPORT (attention >= 7), recompute the hash yourself
+   from your own `get_issue` (you verify those issues exist anyway) and overwrite the subagent's
+   value on mismatch — subagent hashes have proven unreliable, and a wrong hash causes false
+   "description changed" signals on the next run.
 
 ## Why this shape
 
-- Subagents get a narrow, single-issue task — no competing multi-hundred-line skill document to
-  skim past.
+- Subagents get a narrow chunk task — no competing multi-hundred-line skill document to skim
+  past, and a small enough fan-out (≤3 concurrent) that the provider is not saturated.
 - The orchestrator never ingests full issue descriptions/comments for candidates — only compact
   JSON — so its own context stays small across a scan of any size, and it, not a subagent, is the
   only place state-file writes happen.

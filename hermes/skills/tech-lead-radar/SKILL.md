@@ -74,6 +74,13 @@ Look for:
 
 If the state file is missing or an issue has no prior entry, perform a broader initial scan for it and clearly treat it as a baseline — do not report it purely for "appearing for the first time."
 
+A missing/empty state file also means a **baseline run**: with the default 3-week window the
+candidate list can reach 100+ issues. Filter noise aggressively, but never by summary alone for
+anything that looks like a feature, integration, migration, or billing change — generic one-line
+names hide real scope (in the 2026-11-20 baseline run a summary-only filter silently dropped two
+Workday-integration tasks; they were caught only by a manual re-check). Say at the top of the
+report that this is a baseline run, and expect more reported issues than in steady state.
+
 Use `search_issues` to build this window, then `get_issue` on each candidate to read the full description before scoring — summaries alone rarely show scope expansion or hidden complexity. See [references/youtrack-queries.md](references/youtrack-queries.md) for tested query syntax (relative dates, project scoping, state filters).
 
 ### Delegate scoring to subagents when the window is large
@@ -81,14 +88,23 @@ Use `search_issues` to build this window, then `get_issue` on each candidate to 
 Reading a full description + comments for every candidate and reasoning about signals, scope
 expansion, and implementation-direction shifts for each one is a lot of prose to hold in one
 context alongside this whole SKILL.md. On a small window (roughly ≤5 candidates) just score them
-directly — delegation overhead isn't worth it. Once the window is larger, delegate per-issue
-scoring to a subagent (see [references/subagent-scoring.md](references/subagent-scoring.md) for
-the exact task template and output contract) so the orchestrator's own context only ever holds
-compact JSON verdicts, not full issue bodies. This exists specifically to avoid context rot:
-a long-running scan that piles every issue's full text plus this skill's instructions into one
-context is exactly the situation where a model starts skipping instructions buried later in the
-document (e.g. the Safety rules) — keep the orchestrator's
-context small and offload the heavy reading.
+directly — delegation overhead isn't worth it. Once the window is larger, delegate chunked scoring to subagents — **at most 3 subagents
+concurrent, each scoring a chunk of issues** (see
+[references/subagent-scoring.md](references/subagent-scoring.md) for the exact task template and
+output contract) so the orchestrator's own context only ever holds compact JSON verdicts, not
+full issue bodies. This exists specifically to avoid context rot: a long-running scan that piles
+every issue's full text plus this skill's instructions into one context is exactly the situation
+where a model starts skipping instructions buried later in the document (e.g. the Safety rules)
+— keep the orchestrator's context small and offload the heavy reading.
+
+**Never fan out one subagent per issue.** A large per-issue fan-out saturates the model provider
+and most of it dies: in a 2026-11-20 run, 25 of 40 per-issue subagents failed with provider
+stalls ("Provider has been unresponsive for 5 consecutive stale attempts" / broken pipe) after
+15–25 minutes each. Three concurrent subagents with chunked inputs (~10–15 issues each) complete
+the same work reliably. If a subagent still fails: read its live transcript for the real cause
+(the delegation wrapper mislabels provider stalls as "output_schema mismatch"), retry its chunk
+once, and if the retry fails too, score that chunk directly in the orchestrator with `get_issue`
+rather than losing the issues.
 
 The orchestrator still owns: building the search query, reading/writing the state file,
 assembling the final report, and every YouTrack write-adjacent decision (there should be none —
@@ -318,6 +334,11 @@ Two recurring situations need calibrated (not reflexive) handling — read [refe
 # Output
 
 Only report tasks with `attention >= 7`.
+
+Cap the report size. If more than ~8 issues cross the threshold (normal for a baseline run),
+tier the report: top 5 by attention in the full format below, everything else as compact
+one-liners (`ID — название — N/10 — window — одна строка причины`). Twenty-plus full-format
+blocks train the Tech Lead to skim or ignore the radar — the opposite of the Noise control goal.
 
 Write the final report in Russian, regardless of the language used internally for reasoning or tool calls. Keep issue IDs, field names like `Intervention`/`Attention`, and intervention window values (`before_development`, etc.) as-is — do not translate identifiers or enum values, only the prose.
 
