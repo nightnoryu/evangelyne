@@ -60,7 +60,7 @@ An issue already in state with `reported: true` is reported again **only** if at
 
 Otherwise stay silent about it, but still refresh its entry.
 
-If nothing qualifies after this filter, the correct output is the single no-action line. A quiet report is a success, not a failure to find something.
+If nothing qualifies after this filter, the correct output is exactly the single line `[SILENT]` and nothing else (see the Output section of SKILL.md). A quiet report is a success, not a failure to find something. The state file is still written even on a silent run.
 
 ### Marking repeats
 
@@ -81,4 +81,4 @@ Never re-raise an item as if it were new.
 
 ## Failure handling
 
-If the file exists but does not parse: do not abort the run. Add one caveat line to the report (`состояние не читалось, отчёт построен с нуля`), treat state as empty, and overwrite with a valid object at the end.
+If the file exists but does not parse: do not abort the run. Treat state as empty and overwrite with a valid object at the end. If the report is non-empty, add one caveat line to it (`состояние не читалось, отчёт построен с нуля`). If nothing qualifies anyway, emit exactly `[SILENT]` — the caveat must not break the silent-output contract; the rewritten state file records the reset.

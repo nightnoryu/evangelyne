@@ -59,7 +59,7 @@ Never infer "today" from the prompt text, from conversation history, or from a s
 
 Then read the state file (format, path, and re-notification rules: [references/state-file.md](references/state-file.md)). It tells you what was already reported and at what urgency, so today's run can stay quiet about unchanged things.
 
-If the file is missing or unparseable, treat state as empty, add a one-line caveat to the report, and write a fresh valid file at the end.
+If the file is missing or unparseable, treat state as empty and write a fresh valid file at the end. If the report is non-empty, add one caveat line to it (`состояние не читалось, отчёт построен с нуля`); if nothing qualifies, emit exactly `[SILENT]` — the silent-output contract takes precedence over the caveat.
 
 ## 2. Build the candidate set
 
@@ -162,7 +162,9 @@ No preamble, no summary of how many issues were scanned, no encouragement.
 
 If nothing qualifies, return exactly this single line and nothing else:
 
-> Сейчас от тебя ничего не ждут.
+> [SILENT]
+
+This is a hard output contract. When the run concludes that nothing is awaited from the user, the reply must be the literal line `[SILENT]` — no greeting, no explanation, no "всё чисто", no caveat lines, nothing before or after it. Downstream consumers (the weekday cron) rely on this exact marker; any extra words defeat it. The state file is still written (see Persist state) even on a silent run.
 
 Otherwise:
 
@@ -205,6 +207,6 @@ Before returning:
 5. Every item has exactly one concrete action the user can perform themselves.
 6. Every link came from a tool response `url`.
 7. Sorted by urgency; re-reported items marked with what changed.
-8. Report is in Russian and short.
+8. Report is in Russian and short. If nothing qualified, the output is exactly `[SILENT]` — one line, nothing else, even if state was unreadable (no caveat line in the silent case).
 9. Nothing was written to YouTrack.
 10. State file written.
